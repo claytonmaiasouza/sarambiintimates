@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
 import { useDropzone } from "react-dropzone";
 import { Upload, Loader2, RotateCcw, Download, AlertCircle, CheckCircle, Sparkles } from "lucide-react";
 import { products } from "@/lib/products";
 import SafeImage from "@/components/SafeImage";
+import ResultViewer from "@/components/ResultViewer";
 
 type TryOnStatus = "idle" | "uploading" | "processing" | "done" | "error";
 
-function ResultViewer({
+function TryOnResultPanel({
   status,
   resultImage,
   errorMsg,
@@ -18,37 +19,6 @@ function ResultViewer({
   resultImage: string | null;
   errorMsg: string | null;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [hovered, setHovered] = useState(false);
-  const [imgStyle, setImgStyle] = useState<React.CSSProperties>({});
-  const [tiltStyle, setTiltStyle] = useState<React.CSSProperties>({});
-
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const x = (e.clientX - rect.left) / rect.width;   // 0→1 left→right
-    const y = (e.clientY - rect.top) / rect.height;   // 0→1 top→bottom
-
-    // Zoom + pan: scale 2.2x, translate so hovered point stays visible
-    const scale = 2.2;
-    const tx = (0.5 - x) * (scale - 1) * 50;
-    const ty = (0.5 - y) * (scale - 1) * 50;
-    setImgStyle({ transform: `scale(${scale}) translate(${tx}%, ${ty}%)` });
-
-    // Tilt: ±12deg rotateX/Y based on distance from center
-    const rx = (0.5 - x) * 24;  // rotateY (left/right tilt)
-    const ry = (y - 0.5) * 14;  // rotateX (top/bottom tilt)
-    setTiltStyle({ transform: `perspective(600px) rotateY(${rx}deg) rotateX(${ry}deg)` });
-  }, []);
-
-  const handleMouseEnter = useCallback(() => setHovered(true), []);
-  const handleMouseLeave = useCallback(() => {
-    setHovered(false);
-    setImgStyle({});
-    setTiltStyle({ transform: "perspective(600px) rotateY(0deg) rotateX(0deg)" });
-    setTimeout(() => setTiltStyle({}), 400);
-  }, []);
-
   if (status === "processing" || status === "uploading") {
     return (
       <div className="aspect-[3/4] bg-cream-dark relative rounded-sm overflow-hidden flex items-center justify-center">
@@ -57,58 +27,27 @@ function ResultViewer({
           <p className="text-sm text-muted">
             {status === "uploading" ? "Enviando imagem..." : "Gerando provador virtual..."}
           </p>
-          <p className="text-xs text-muted/60 text-center max-w-[180px]">
-            Isso pode levar até 30 segundos
-          </p>
+          <p className="text-xs text-muted/60 text-center max-w-[180px]">Isso pode levar até 30 segundos</p>
         </div>
       </div>
     );
   }
-
   if (resultImage) {
     return (
-      <div
-        ref={containerRef}
-        className="aspect-[3/4] relative rounded-sm select-none"
-        style={{ ...tiltStyle, transition: hovered ? "none" : "transform 0.4s ease" }}
-        onMouseMove={handleMouseMove}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        <div className="absolute inset-0 overflow-hidden rounded-sm">
-          <Image
-            src={resultImage}
-            alt="Resultado do provador"
-            fill
-            className="object-cover"
-            style={{ ...imgStyle, transition: hovered ? "none" : "transform 0.3s ease", cursor: hovered ? "zoom-in" : "default" }}
-            unoptimized
-          />
-        </div>
-
-        {/* Hint */}
-        {!hovered && (
-          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-ink/60 to-transparent p-3 flex items-center justify-center gap-1.5 rounded-b-sm">
-            <span className="text-cream/80 text-xs tracking-wide">Passe o mouse para zoom · arraste para girar</span>
-          </div>
-        )}
-
-        {/* Download */}
+      <div className="flex flex-col gap-2">
+        <ResultViewer outputUrl={resultImage} />
         <a
           href={resultImage}
           download="sarambi-tryon.jpg"
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute top-3 right-3 bg-ink/70 text-cream p-2 rounded-full hover:bg-ink transition-colors"
-          title="Baixar"
-          onMouseEnter={(e) => e.stopPropagation()}
+          className="self-end flex items-center gap-1.5 text-xs text-muted hover:text-ink transition-colors"
         >
-          <Download size={14} />
+          <Download size={13} /> Baixar
         </a>
       </div>
     );
   }
-
   if (status === "error") {
     return (
       <div className="aspect-[3/4] bg-cream-dark relative rounded-sm overflow-hidden flex items-center justify-center">
@@ -120,7 +59,6 @@ function ResultViewer({
       </div>
     );
   }
-
   return (
     <div className="aspect-[3/4] bg-cream-dark relative rounded-sm overflow-hidden flex items-center justify-center">
       <div className="flex flex-col items-center gap-2 text-center px-4">
@@ -333,7 +271,7 @@ export default function VirtualTryOn({ defaultProductSlug }: { defaultProductSlu
             Veja como a peça fica em você antes de comprar.
           </p>
 
-          <ResultViewer
+          <TryOnResultPanel
             status={status}
             resultImage={resultImage}
             errorMsg={errorMsg}

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { TryOnProvider } from "@/contexts/TryOnContext";
+import TryOnToast from "@/components/TryOnToast";
 
 export const metadata: Metadata = {
   title: "Sarambi Intimates — Pijamas e Lingerie",
@@ -31,7 +33,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col bg-cream text-ink antialiased">
-        {children}
+        <TryOnProvider>
+          {children}
+          <TryOnToast />
+        </TryOnProvider>
       </body>
     </html>
   );

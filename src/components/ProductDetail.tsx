@@ -4,9 +4,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Sparkles, ChevronLeft, ChevronRight, ArrowLeft, ZoomIn, X } from "lucide-react";
-import { Suspense } from "react";
 import type { Product } from "@/lib/products";
-import VirtualTryOn from "@/components/VirtualTryOn";
+import TryOnModal from "@/components/TryOnModal";
 
 const categoryLabel: Record<string, string> = {
   conjunto: "Conjunto",
@@ -23,14 +22,10 @@ export default function ProductDetail({ product }: { product: Product }) {
   const [activeImg, setActiveImg] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const [imgStyle, setImgStyle] = useState<React.CSSProperties>({});
   const galleryRef = useRef<HTMLDivElement>(null);
-  const tryonRef = useRef<HTMLDivElement>(null);
-
-  const scrollToTryon = () => {
-    tryonRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
 
   const prev = () => setActiveImg((i) => (i === 0 ? product.images.length - 1 : i - 1));
   const next = () => setActiveImg((i) => (i === product.images.length - 1 ? 0 : i + 1));
@@ -249,7 +244,7 @@ export default function ProductDetail({ product }: { product: Product }) {
           {/* CTAs */}
           <div className="flex flex-col gap-3 pt-2">
             <button
-              onClick={scrollToTryon}
+              onClick={() => setModalOpen(true)}
               className="w-full flex items-center justify-center gap-2 bg-ink text-cream py-4 text-sm uppercase tracking-widest hover:bg-gold hover:text-ink transition-all duration-300"
             >
               <Sparkles size={15} />
@@ -344,24 +339,8 @@ export default function ProductDetail({ product }: { product: Product }) {
         </div>
       )}
 
-      {/* Virtual try-on section */}
-      <div ref={tryonRef} className="scroll-mt-24">
-        <section className="bg-ink py-4 px-6">
-          <div className="max-w-7xl mx-auto flex items-center gap-3">
-            <Sparkles size={16} className="text-rose" />
-            <h2 className="font-display text-2xl text-cream">Provador Virtual</h2>
-            <span className="text-cream/40 text-sm hidden md:block">— experimente antes de comprar</span>
-          </div>
-        </section>
-
-        <section className="py-16 px-6 bg-cream">
-          <div className="max-w-7xl mx-auto">
-            <Suspense fallback={<div className="text-muted text-sm py-12 text-center">Carregando provador...</div>}>
-              <VirtualTryOn defaultProductSlug={product.slug} />
-            </Suspense>
-          </div>
-        </section>
-      </div>
+      {/* Try-on modal */}
+      {modalOpen && <TryOnModal product={product} onClose={() => setModalOpen(false)} />}
     </>
   );
 }
