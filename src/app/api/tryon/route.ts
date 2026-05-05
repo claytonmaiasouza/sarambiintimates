@@ -31,6 +31,7 @@ async function pollForResult(jobId: string, maxAttempts = 18): Promise<string> {
 
 async function resizeToBase64(buffer: Buffer, label: string): Promise<string> {
   const resized = await sharp(buffer)
+    .rotate()
     .resize(768, 1024, { fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: 85 })
     .toBuffer();

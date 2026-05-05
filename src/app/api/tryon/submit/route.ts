@@ -9,6 +9,7 @@ const FASHN_BASE_URL = "https://api.fashn.ai/v1";
 
 async function resizeToBase64(buffer: Buffer): Promise<string> {
   const resized = await sharp(buffer)
+    .rotate()
     .resize(768, 1024, { fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: 85 })
     .toBuffer();
