@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2C2520"/>
+      <stop offset="60%" stop-color="#1A1713"/>
+      <stop offset="100%" stop-color="#0D0B09"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#E8B4B8" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#E8B4B8" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1400" height="900" fill="url(#bg)"/>
+  <ellipse cx="700" cy="200" rx="500" ry="300" fill="url(#glow)"/>
+  <ellipse cx="400" cy="600" rx="200" ry="400" fill="#F4C5C8" opacity="0.08"/>
+  <ellipse cx="900" cy="550" rx="180" ry="380" fill="#B8D4E3" opacity="0.06"/>
+  <text x="700" y="420" font-family="Georgia, serif" font-size="11" fill="#C9A96E" text-anchor="middle" letter-spacing="6" opacity="0.6">SARAMBI INTIMATES</text>
+  <text x="700" y="490" font-family="Georgia, 'Times New Roman', serif" font-size="72" font-style="italic" fill="#FAF8F4" text-anchor="middle" opacity="0.15">Sarambi</text>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#FAFAFA"/>
+      <stop offset="100%" stop-color="#F0EBE0"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#g)"/>
+  <polygon points="300,100 180,180 160,500 440,500 420,180" fill="#FFFFFF" opacity="0.9" stroke="#1A1713" stroke-width="2.5"/>
+  <line x1="300" y1="100" x2="230" y2="350" stroke="#1A1713" stroke-width="2"/>
+  <line x1="300" y1="100" x2="370" y2="350" stroke="#1A1713" stroke-width="2"/>
+  <rect x="260" y="490" width="80" height="10" rx="3" fill="#1A1713"/>
+  <text x="300" y="680" font-family="Georgia, serif" font-size="13" fill="#1A1713" text-anchor="middle" letter-spacing="3">ROBE CETIM</text>
+  <text x="300" y="705" font-family="Georgia, serif" font-size="11" fill="#8C7E73" text-anchor="middle" letter-spacing="2">R$ 259,00</text>
+</svg>

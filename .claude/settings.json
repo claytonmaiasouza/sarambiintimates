@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"d:\\\\projetos claudecode\\\\sarambiintimates\" -Depth 2 | Where-Object { $_.PSIsContainer } | Select-Object FullName)",
+      "PowerShell(Get-ChildItem \"d:\\\\projetos claudecode\\\\sarambiintimates\\\\public\\\\images\" -Recurse -File | Where-Object { $_.Extension -match \"\\\\.\\(jpg|png\\)\" } | Select-Object FullName)",
+      "PowerShell(Get-ChildItem \"d:\\\\projetos claudecode\\\\sarambiintimates\\\\public\\\\images\" -Recurse -File | ForEach-Object { \"$\\($_.Name\\) = $\\([math]::Round\\($_.Length/1KB\\)\\) KB\" })",
+      "WebFetch(domain:docs.fashn.ai)",
+      "WebFetch(domain:sarambi.com.br)"
+    ]
+  }
+}

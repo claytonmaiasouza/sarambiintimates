@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 900">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#F0EBE0"/>
+      <stop offset="100%" stop-color="#FAF8F4"/>
+    </linearGradient>
+  </defs>
+  <rect width="700" height="900" fill="url(#g)"/>
+  <rect x="200" y="80" width="300" height="420" rx="10" fill="#E8B4B8" opacity="0.4"/>
+  <rect x="220" y="520" width="115" height="280" rx="5" fill="#E8B4B8" opacity="0.3"/>
+  <rect x="365" y="520" width="115" height="280" rx="5" fill="#E8B4B8" opacity="0.3"/>
+  <circle cx="350" cy="50" r="30" fill="#F0EBE0" stroke="#C9A96E" stroke-width="1.5"/>
+  <text x="350" y="820" font-family="Georgia, serif" font-size="12" fill="#8C7E73" text-anchor="middle" letter-spacing="3">PROVADOR VIRTUAL</text>
+</svg>

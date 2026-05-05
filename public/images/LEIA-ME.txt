@@ -1,0 +1,40 @@
+INSTRUÇÕES PARA ORGANIZAR AS IMAGENS DA SARAMBI
+================================================
+
+Copie as imagens para as pastas abaixo com os nomes indicados:
+
+=== LOGOS ===
+/images/logo-dark.png       → Logo preto (fundo branco/claro)
+/images/logo-light.png      → Logo claro/creme (para fundo escuro)
+
+=== HERO E LIFESTYLE ===
+/images/hero-duo.jpg         → Foto das duas modelos rindo juntas (fundo cinza texturizado)
+/images/tryon-preview.jpg    → Foto do provador (modelo azul ou rosa individual)
+/images/lifestyle-hands.jpg  → Foto close das mãos com unhas
+/images/lifestyle-duo.jpg    → Outra foto de duo
+/images/lifestyle-pink.jpg   → Foto da modelo rosa individualmente
+/images/lifestyle-blue.jpg   → Foto da modelo azul bebê individualmente
+
+=== PRODUTOS ===
+/images/products/pink-pajama-full.jpg      → Modelo de corpo inteiro com pijama rosa
+/images/products/pink-pajama-cutout.jpg    → Modelo pijama rosa com fundo preto (cutout)
+/images/products/pink-pajama-detail.jpg    → Close do pijama rosa
+/images/products/blue-pajama-full.jpg      → Modelo de corpo inteiro com pijama azul
+/images/products/blue-pajama-detail.jpg    → Close do pijama azul
+/images/products/white-nightdress-full.jpg → Modelo com camisola branca (corpo inteiro)
+/images/products/white-nightdress-cutout.jpg → Modelo camisola branca fundo preto
+/images/products/white-robe-cutout.jpg     → Modelo robe branco+preto fundo preto
+
+=== HISTÓRIA ===
+/images/historia-founder.jpg → Foto da fundadora ou foto inspiracional
+/images/gallery-1.jpg        → Galeria 1
+/images/gallery-2.jpg        → Galeria 2
+/images/gallery-3.jpg        → Galeria 3
+/images/gallery-4.jpg        → Galeria 4
+
+=== AMOSTRAS DO PROVADOR ===
+/images/samples/model-1.jpg  → Modelo de exemplo 1 (foto de corpo inteiro)
+/images/samples/model-2.jpg  → Modelo de exemplo 2 (foto de corpo inteiro)
+
+DICA: Coloque fotos de corpo inteiro com fundo claro como amostras do provador.
+      Qualquer foto das modelos individuais serve bem para isso.

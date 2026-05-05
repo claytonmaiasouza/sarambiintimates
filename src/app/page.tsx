@@ -1,65 +1,200 @@
 import Image from "next/image";
+import Link from "next/link";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import ProductCard from "@/components/ProductCard";
+import { products } from "@/lib/products";
+import { ArrowRight, Sparkles } from "lucide-react";
 
 export default function Home() {
+  const featured = products.slice(0, 3);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <>
+      <Header />
+
+      {/* Hero */}
+      <section className="relative min-h-screen flex items-center overflow-hidden">
+        {/* Foto — posicionada para rostos ficarem no centro vertical */}
+        <div className="absolute inset-0">
+          <Image
+            src="/images/hero-duo.jpg"
+            alt="Sarambi — Mulheres livres"
+            fill
+            className="object-cover"
+            style={{ objectPosition: "60% 18%" }}
+            priority
+          />
+          {/* Gradiente lateral da esquerda para legibilidade do texto */}
+          <div className="absolute inset-0 bg-gradient-to-r from-ink/75 via-ink/40 to-transparent" />
+          {/* Gradiente sutil no topo e fundo */}
+          <div className="absolute inset-0 bg-gradient-to-b from-ink/30 via-transparent to-ink/20" />
+        </div>
+
+        {/* Texto — centralizado verticalmente, alinha com os rostos */}
+        <div className="relative max-w-7xl mx-auto px-6 w-full pt-24">
+          <div className="max-w-lg">
+            <p className="text-rose text-xs uppercase tracking-widest mb-5 font-body">
+              Sarambi Intimates
+            </p>
+            <h1 className="font-display text-5xl md:text-7xl text-cream leading-tight mb-6">
+              A bagunça
+              <br />
+              <em>bonita</em> de ser
+              <br />
+              mulher.
+            </h1>
+            <p className="text-cream/70 text-base font-body leading-relaxed mb-10 max-w-sm">
+              Pijamas de cetim que abraçam cada fase, cada humor, cada versão
+              de você — com conforto e elegância.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <Link
+                href="/colecao"
+                className="bg-cream text-ink px-8 py-4 text-sm uppercase tracking-widest hover:bg-rose transition-all duration-300 flex items-center gap-2"
+              >
+                Ver coleção
+                <ArrowRight size={14} />
+              </Link>
+              <Link
+                href="/provador"
+                className="border border-cream text-cream px-8 py-4 text-sm uppercase tracking-widest hover:bg-cream/10 transition-all duration-300 flex items-center gap-2"
+              >
+                <Sparkles size={14} />
+                Provador Virtual
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Manifesto */}
+      <section className="py-24 px-6 bg-cream">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-gold text-xs uppercase tracking-widest mb-6 font-body">Nossa Essência</p>
+          <h2 className="font-display text-4xl md:text-5xl text-ink leading-tight mb-8">
+            &ldquo;As mulheres são como o céu — às vezes calmas como uma manhã de sol, outras vezes intensas como uma tempestade.&rdquo;
+          </h2>
+          <p className="text-muted text-base font-body leading-relaxed max-w-2xl mx-auto mb-10">
+            A Sarambi nasceu do sonho de uma mulher que acredita que toda a complexidade feminina
+            merece ser abraçada. <em>Sarambi</em> significa bagunça em Tupi-Guarani — mas é a
+            bagunça bonita das ideias, das emoções e das histórias que fazem cada pessoa ser única.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/historia"
+            className="text-sm uppercase tracking-widest text-ink border-b border-ink pb-0.5 hover:text-gold hover:border-gold transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            Conheça nossa história
+          </Link>
         </div>
-      </main>
-    </div>
+      </section>
+
+      {/* Produtos em destaque */}
+      <section className="py-20 px-6 bg-cream-dark">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
+            <div>
+              <p className="text-gold text-xs uppercase tracking-widest mb-2 font-body">Coleção</p>
+              <h2 className="font-display text-4xl text-ink">Peças em destaque</h2>
+            </div>
+            <Link
+              href="/colecao"
+              className="text-sm uppercase tracking-widest text-muted hover:text-ink transition-colors flex items-center gap-2"
+            >
+              Ver todas
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {featured.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Banner Provador Virtual */}
+      <section className="py-24 px-6 bg-ink">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <p className="text-rose text-xs uppercase tracking-widest mb-4 font-body">
+                Tecnologia + Moda
+              </p>
+              <h2 className="font-display text-4xl md:text-5xl text-cream leading-tight mb-6">
+                Experimente antes de comprar
+              </h2>
+              <p className="text-cream/60 text-base leading-relaxed mb-8">
+                Com nosso provador virtual por inteligência artificial, você pode ver como cada
+                peça fica em você antes de finalizar o pedido. É rápido, seguro e gratuito.
+              </p>
+              <ul className="flex flex-col gap-3 mb-10">
+                {[
+                  "Envie uma foto sua",
+                  "Escolha a peça desejada",
+                  "Veja o resultado em segundos",
+                ].map((step, i) => (
+                  <li key={i} className="flex items-center gap-3 text-cream/70 text-sm">
+                    <span className="w-6 h-6 rounded-full border border-rose text-rose text-xs flex items-center justify-center flex-shrink-0 font-display">
+                      {i + 1}
+                    </span>
+                    {step}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/provador"
+                className="inline-flex items-center gap-2 bg-rose text-ink px-8 py-4 text-sm uppercase tracking-widest hover:bg-cream transition-all duration-300"
+              >
+                <Sparkles size={16} />
+                Abrir provador virtual
+              </Link>
+            </div>
+            <div className="relative aspect-[4/5] overflow-hidden hidden lg:block">
+              <Image
+                src="/images/tryon-preview.jpg"
+                alt="Provador Virtual Sarambi"
+                fill
+                className="object-cover"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Lifestyle strip */}
+      <section className="py-20 px-6 bg-cream">
+        <div className="max-w-7xl mx-auto">
+          <p className="text-gold text-xs uppercase tracking-widest mb-12 text-center font-body">
+            Momentos que merecem uma Sarambi
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { src: "/images/lifestyle-hands.jpg", caption: "Cuidado" },
+              { src: "/images/lifestyle-duo.jpg", caption: "Cumplicidade" },
+              { src: "/images/lifestyle-pink.jpg", caption: "Elegância" },
+              { src: "/images/lifestyle-blue.jpg", caption: "Leveza" },
+            ].map((item) => (
+              <div key={item.src} className="relative aspect-[3/4] overflow-hidden group">
+                <Image
+                  src={item.src}
+                  alt={item.caption}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-ink/0 group-hover:bg-ink/20 transition-all duration-300 flex items-end p-4">
+                  <span className="text-cream text-xs uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    {item.caption}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+    </>
   );
 }
