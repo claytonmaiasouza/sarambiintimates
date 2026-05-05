@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useDropzone } from "react-dropzone";
 import { X, Upload, Camera, User, Sparkles, Loader2, CheckCircle } from "lucide-react";
@@ -27,10 +27,10 @@ function PhotoDropzone({
   preview: string | null;
   onFile: (file: File, preview: string) => void;
 }) {
-  const onDrop = useCallback(
-    (files: File[]) => {
-      const file = files[0];
-      if (!file) return;
+  const cameraRef = useRef<HTMLInputElement>(null);
+
+  const readFile = useCallback(
+    (file: File) => {
       const reader = new FileReader();
       reader.onload = (e) => onFile(file, e.target?.result as string);
       reader.readAsDataURL(file);
@@ -38,39 +38,84 @@ function PhotoDropzone({
     [onFile]
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const onDrop = useCallback((files: File[]) => { if (files[0]) readFile(files[0]); }, [readFile]);
+
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
+    noClick: true,
     accept: { "image/*": [".jpg", ".jpeg", ".png", ".webp"] },
     maxFiles: 1,
     maxSize: 15 * 1024 * 1024,
   });
+
+  const handleCameraChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) readFile(file);
+    e.target.value = "";
+  };
 
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs uppercase tracking-widest text-ink font-medium">{label}</p>
       <div
         {...getRootProps()}
-        className={`relative aspect-[3/4] border-2 border-dashed rounded-sm cursor-pointer overflow-hidden transition-colors ${
-          isDragActive ? "border-rose bg-rose/5" : "border-border hover:border-gold hover:bg-gold/5"
+        className={`relative aspect-[3/4] border-2 border-dashed rounded-sm overflow-hidden transition-colors ${
+          isDragActive ? "border-rose bg-rose/5" : "border-border"
         }`}
       >
         <input {...getInputProps()} />
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture={"environment" as unknown as boolean}
+          className="hidden"
+          onChange={handleCameraChange}
+        />
         {preview ? (
-          <Image src={preview} alt={label} fill className="object-cover" unoptimized />
+          <>
+            <Image src={preview} alt={label} fill className="object-cover" unoptimized />
+            <div className="absolute inset-0 flex items-end justify-center pb-3 gap-2">
+              <button
+                type="button"
+                onClick={() => cameraRef.current?.click()}
+                className="flex items-center gap-1.5 bg-ink/80 text-cream px-3 py-1.5 text-xs uppercase tracking-widest hover:bg-ink transition-all rounded-sm"
+              >
+                <Camera size={11} />
+                Câmera
+              </button>
+              <button
+                type="button"
+                onClick={open}
+                className="flex items-center gap-1.5 bg-ink/80 text-cream px-3 py-1.5 text-xs uppercase tracking-widest hover:bg-ink transition-all rounded-sm"
+              >
+                <Upload size={11} />
+                Galeria
+              </button>
+            </div>
+          </>
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
-            <Icon size={28} className="text-muted" />
-            <p className="text-sm text-ink font-medium">
-              {isDragActive ? "Solte aqui" : "Arraste ou clique"}
-            </p>
-            <p className="text-xs text-muted">{hint}</p>
-          </div>
-        )}
-        {preview && (
-          <div className="absolute inset-0 bg-ink/0 hover:bg-ink/10 transition-colors flex items-center justify-center">
-            <span className="opacity-0 hover:opacity-100 transition-opacity text-cream text-xs bg-ink/70 px-3 py-1 rounded-full">
-              Trocar foto
-            </span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-4 text-center">
+            <Icon size={24} className="text-muted" />
+            <div className="flex flex-col gap-2 w-full max-w-[160px]">
+              <button
+                type="button"
+                onClick={() => cameraRef.current?.click()}
+                className="flex items-center justify-center gap-2 bg-ink text-cream py-2.5 text-xs uppercase tracking-widest hover:bg-gold hover:text-ink transition-all w-full"
+              >
+                <Camera size={13} />
+                Câmera
+              </button>
+              <button
+                type="button"
+                onClick={open}
+                className="flex items-center justify-center gap-2 border border-border text-muted py-2.5 text-xs uppercase tracking-widest hover:border-ink hover:text-ink transition-colors w-full"
+              >
+                <Upload size={13} />
+                Galeria
+              </button>
+            </div>
+            <p className="text-xs text-muted/60">{hint}</p>
           </div>
         )}
       </div>
@@ -169,7 +214,7 @@ export default function TryOnModal({ product, onClose }: Props) {
               </div>
               <h3 className="font-display text-2xl text-ink">Enviado com sucesso!</h3>
               <p className="text-muted text-sm max-w-sm">
-                Seu provador está sendo preparado em segundo plano. Você receberá um aviso assim que o resultado ficar pronto.
+                Seu provador está sendo preparado.
               </p>
               <div className="flex items-center gap-2 bg-cream-dark px-4 py-3 text-xs text-muted rounded-sm">
                 <Sparkles size={13} className="text-gold" />
@@ -283,7 +328,7 @@ export default function TryOnModal({ product, onClose }: Props) {
                       className="flex items-center gap-2 bg-ink text-cream px-6 py-2.5 text-xs uppercase tracking-widest hover:bg-gold hover:text-ink transition-all disabled:opacity-40"
                     >
                       <Sparkles size={13} />
-                      Experimentar em background
+                      Experimentar
                     </button>
                   </div>
 
