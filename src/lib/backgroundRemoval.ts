@@ -61,8 +61,9 @@ export async function applyBackground(
   // Lazy-load to keep initial bundle small
   const { removeBackground } = await import("@imgly/background-removal");
 
+  // No publicPath override — the library uses its own CDN by default:
+  // https://staticimgly.com/@imgly/background-removal-data/{version}/dist/
   const transparentBlob = await removeBackground(source, {
-    publicPath: "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/dist/",
     output: { format: "image/png", quality: 1.0 },
     progress: (key: string, current: number, total: number) => {
       if (!onProgress || total === 0) return;
