@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useDropzone } from "react-dropzone";
-import { X, Upload, Camera, User, Sparkles, Loader2, CheckCircle } from "lucide-react";
+import { X, Upload, Camera, User, Sparkles, Loader2, CheckCircle, RefreshCw } from "lucide-react";
 import { useTryOn } from "@/contexts/TryOnContext";
 import type { Product } from "@/lib/products";
 
@@ -12,7 +12,29 @@ interface Props {
   onClose: () => void;
 }
 
-type Step = "selfie" | "body" | "submitting" | "done";
+type Step = "upload" | "confirm" | "submitting" | "done";
+
+// Resize data URL client-side before storing in sessionStorage (keeps size ~100-200KB)
+function resizeForStorage(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = document.createElement("img");
+    img.onload = () => {
+      const maxW = 600, maxH = 800;
+      let { width: w, height: h } = img;
+      if (w > maxW || h > maxH) {
+        const r = Math.min(maxW / w, maxH / h);
+        w = Math.round(w * r);
+        h = Math.round(h * r);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.src = dataUrl;
+  });
+}
 
 function PhotoDropzone({
   label,
@@ -124,11 +146,9 @@ function PhotoDropzone({
 }
 
 export default function TryOnModal({ product, onClose }: Props) {
-  const { addJob } = useTryOn();
-  const [step, setStep] = useState<Step>("selfie");
+  const { addJob, avatar, setAvatar } = useTryOn();
+  const [step, setStep] = useState<Step>(avatar ? "confirm" : "upload");
 
-  const [selfieFile, setSelfieFile] = useState<File | null>(null);
-  const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
   const [bodyFile, setBodyFile] = useState<File | null>(null);
   const [bodyPreview, setBodyPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -144,50 +164,66 @@ export default function TryOnModal({ product, onClose }: Props) {
     };
   }, [onClose]);
 
-  const handleSelfie = useCallback((file: File, preview: string) => {
-    setSelfieFile(file);
-    setSelfiePreview(preview);
-    setError(null);
-  }, []);
-
   const handleBody = useCallback((file: File, preview: string) => {
     setBodyFile(file);
     setBodyPreview(preview);
     setError(null);
   }, []);
 
-  const handleSubmit = async () => {
-    if (!bodyFile) { setError("Adicione a foto de corpo inteiro."); return; }
+  // Submit try-on using the original File (best quality for server processing)
+  const submitTryOn = async (file: File, previewUrl: string) => {
+    const formData = new FormData();
+    formData.append("body_image", file);
+    formData.append("garment_slug", product.slug);
+    formData.append("category", product.tryonCategory);
+
+    const res = await fetch("/api/tryon/submit", { method: "POST", body: formData });
+    const data = await res.json();
+
+    if (!res.ok || !data.jobId) {
+      throw new Error(data.error || "Erro ao enviar imagens");
+    }
+
+    addJob({
+      jobId: data.jobId,
+      productSlug: product.slug,
+      productName: product.name,
+      productImage: product.images[0],
+      selfiePreview: null,
+      bodyPreview: previewUrl,
+      timestamp: Date.now(),
+    });
+  };
+
+  // First-time: save avatar to session + submit
+  const handleCreateAvatar = async () => {
+    if (!bodyFile || !bodyPreview) return;
     setStep("submitting");
     setError(null);
-
     try {
-      const formData = new FormData();
-      formData.append("body_image", bodyFile);
-      formData.append("garment_slug", product.slug);
-      formData.append("category", product.tryonCategory);
-
-      const res = await fetch("/api/tryon/submit", { method: "POST", body: formData });
-      const data = await res.json();
-
-      if (!res.ok || !data.jobId) {
-        throw new Error(data.error || "Erro ao enviar imagens");
-      }
-
-      addJob({
-        jobId: data.jobId,
-        productSlug: product.slug,
-        productName: product.name,
-        productImage: product.images[0],
-        selfiePreview,
-        bodyPreview: bodyPreview!,
-        timestamp: Date.now(),
-      });
-
+      const resized = await resizeForStorage(bodyPreview);
+      setAvatar(resized);
+      await submitTryOn(bodyFile, resized);
       setStep("done");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erro inesperado");
-      setStep("body");
+      setStep("upload");
+    }
+  };
+
+  // Subsequent: re-use stored avatar (convert base64 back to File for the server)
+  const handleUseAvatar = async () => {
+    if (!avatar) return;
+    setStep("submitting");
+    setError(null);
+    try {
+      const blob = await fetch(avatar).then((r) => r.blob());
+      const file = new File([blob], "avatar.jpg", { type: "image/jpeg" });
+      await submitTryOn(file, avatar);
+      setStep("done");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erro inesperado");
+      setStep("confirm");
     }
   };
 
@@ -227,117 +263,103 @@ export default function TryOnModal({ product, onClose }: Props) {
                 Continuar navegando
               </button>
             </div>
+
           ) : step === "submitting" ? (
             <div className="flex flex-col items-center gap-4 py-12 text-center">
               <Loader2 size={36} className="text-gold animate-spin" />
               <p className="text-sm text-muted">Enviando suas fotos…</p>
             </div>
-          ) : (
-            <>
-              {/* Step indicator */}
-              <div className="flex items-center gap-3 mb-6">
-                {(["selfie", "body"] as const).map((s, i) => (
-                  <div key={s} className="flex items-center gap-2">
-                    <button
-                      onClick={() => setStep(s)}
-                      className={`w-6 h-6 rounded-full text-xs font-display flex items-center justify-center transition-all ${
-                        step === s ? "bg-ink text-cream" : "bg-border text-muted"
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                    <span className={`text-xs uppercase tracking-widest ${step === s ? "text-ink" : "text-muted"}`}>
-                      {s === "selfie" ? "Selfie" : "Corpo inteiro"}
-                    </span>
-                    {i === 0 && <span className="text-border mx-1">→</span>}
-                  </div>
-                ))}
-              </div>
 
-              {step === "selfie" && (
-                <div className="flex flex-col gap-5">
-                  <p className="text-sm text-muted">
-                    Tire uma selfie do rosto para personalizar o resultado com as suas feições.
-                  </p>
-                  <div className="max-w-xs mx-auto w-full">
-                    <PhotoDropzone
-                      label="Selfie do rosto"
-                      hint="Foto de frente com boa iluminação"
-                      icon={Camera}
-                      preview={selfiePreview}
-                      onFile={handleSelfie}
-                    />
-                  </div>
-                  <div className="flex gap-3 justify-end pt-2">
-                    <button
-                      onClick={() => setStep("body")}
-                      className="text-xs text-muted uppercase tracking-widest hover:text-ink transition-colors"
-                    >
-                      Pular esta etapa
-                    </button>
-                    <button
-                      onClick={() => setStep("body")}
-                      disabled={!selfieFile}
-                      className="bg-ink text-cream px-6 py-2.5 text-xs uppercase tracking-widest hover:bg-gold hover:text-ink transition-all disabled:opacity-40"
-                    >
-                      Próximo →
-                    </button>
+          ) : step === "confirm" ? (
+            /* Has avatar — confirm + submit */
+            <div className="flex flex-col gap-5">
+              <p className="text-sm text-muted">
+                Seu avatar está pronto! Clique em <em>Experimentar</em> para ver como essa peça fica em você.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs uppercase tracking-widest text-ink font-medium">Seu Avatar</p>
+                  <div className="relative aspect-[3/4] bg-cream-dark rounded-sm overflow-hidden">
+                    <Image src={avatar!} alt="Seu avatar" fill className="object-cover" unoptimized />
                   </div>
                 </div>
-              )}
-
-              {step === "body" && (
-                <div className="flex flex-col gap-5">
-                  <p className="text-sm text-muted">
-                    Envie uma foto de corpo inteiro, de frente, com fundo claro e boa iluminação — quanto mais nítida, melhor o resultado.
-                  </p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <PhotoDropzone
-                      label="Foto de corpo inteiro"
-                      hint="De frente, fundo claro, corpo todo"
-                      icon={User}
-                      preview={bodyPreview}
-                      onFile={handleBody}
-                    />
-                    {/* Preview produto */}
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs uppercase tracking-widest text-ink font-medium">Peça selecionada</p>
-                      <div className="relative aspect-[3/4] bg-cream-dark rounded-sm overflow-hidden">
-                        <Image src={product.images[0]} alt={product.name} fill className="object-cover" unoptimized />
-                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-ink/60 to-transparent p-3">
-                          <p className="text-cream text-xs font-display">{product.name}</p>
-                        </div>
-                      </div>
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs uppercase tracking-widest text-ink font-medium">Peça selecionada</p>
+                  <div className="relative aspect-[3/4] bg-cream-dark rounded-sm overflow-hidden">
+                    <Image src={product.images[0]} alt={product.name} fill className="object-cover" unoptimized />
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-ink/60 to-transparent p-3">
+                      <p className="text-cream text-xs font-display">{product.name}</p>
                     </div>
                   </div>
-
-                  {error && (
-                    <p className="text-xs text-rose-dark bg-rose/10 px-3 py-2 rounded-sm">{error}</p>
-                  )}
-
-                  <div className="flex gap-3 justify-between pt-2">
-                    <button
-                      onClick={() => setStep("selfie")}
-                      className="text-xs text-muted uppercase tracking-widest hover:text-ink transition-colors"
-                    >
-                      ← Voltar
-                    </button>
-                    <button
-                      onClick={handleSubmit}
-                      disabled={!bodyFile}
-                      className="flex items-center gap-2 bg-ink text-cream px-6 py-2.5 text-xs uppercase tracking-widest hover:bg-gold hover:text-ink transition-all disabled:opacity-40"
-                    >
-                      <Sparkles size={13} />
-                      Experimentar
-                    </button>
-                  </div>
-
-                  <p className="text-xs text-muted/60 text-center">
-                    🔒 Suas fotos são processadas com segurança e não são armazenadas
-                  </p>
                 </div>
+              </div>
+
+              {error && (
+                <p className="text-xs text-rose-dark bg-rose/10 px-3 py-2 rounded-sm">{error}</p>
               )}
-            </>
+
+              <div className="flex gap-3 justify-between pt-2 items-center">
+                <button
+                  onClick={() => { setBodyFile(null); setBodyPreview(null); setStep("upload"); }}
+                  className="flex items-center gap-1.5 text-xs text-muted uppercase tracking-widest hover:text-ink transition-colors"
+                >
+                  <RefreshCw size={11} />
+                  Alterar avatar
+                </button>
+                <button
+                  onClick={handleUseAvatar}
+                  className="flex items-center gap-2 bg-ink text-cream px-6 py-2.5 text-xs uppercase tracking-widest hover:bg-gold hover:text-ink transition-all"
+                >
+                  <Sparkles size={13} />
+                  Experimentar
+                </button>
+              </div>
+            </div>
+
+          ) : (
+            /* No avatar — create avatar flow */
+            <div className="flex flex-col gap-5">
+              <p className="text-sm text-muted">
+                Envie uma foto de corpo inteiro para criar seu avatar. Ele ficará salvo durante toda a sessão — assim você experimenta várias peças sem precisar enviar outra foto.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <PhotoDropzone
+                  label="Foto de corpo inteiro"
+                  hint="De frente, fundo claro, corpo todo"
+                  icon={User}
+                  preview={bodyPreview}
+                  onFile={handleBody}
+                />
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs uppercase tracking-widest text-ink font-medium">Peça selecionada</p>
+                  <div className="relative aspect-[3/4] bg-cream-dark rounded-sm overflow-hidden">
+                    <Image src={product.images[0]} alt={product.name} fill className="object-cover" unoptimized />
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-ink/60 to-transparent p-3">
+                      <p className="text-cream text-xs font-display">{product.name}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {error && (
+                <p className="text-xs text-rose-dark bg-rose/10 px-3 py-2 rounded-sm">{error}</p>
+              )}
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={handleCreateAvatar}
+                  disabled={!bodyFile}
+                  className="flex items-center gap-2 bg-ink text-cream px-6 py-2.5 text-xs uppercase tracking-widest hover:bg-gold hover:text-ink transition-all disabled:opacity-40"
+                >
+                  <Sparkles size={13} />
+                  Criar Avatar e Experimentar
+                </button>
+              </div>
+
+              <p className="text-xs text-muted/60 text-center">
+                🔒 Suas fotos são processadas com segurança e não são armazenadas
+              </p>
+            </div>
           )}
         </div>
       </div>

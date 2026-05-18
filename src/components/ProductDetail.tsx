@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Sparkles, ChevronLeft, ChevronRight, ArrowLeft, ZoomIn, X } from "lucide-react";
 import type { Product } from "@/lib/products";
 import TryOnModal from "@/components/TryOnModal";
+import { useTryOn } from "@/contexts/TryOnContext";
 
 const categoryLabel: Record<string, string> = {
   conjunto: "Conjunto",
@@ -19,6 +20,7 @@ const categoryLabel: Record<string, string> = {
 };
 
 export default function ProductDetail({ product }: { product: Product }) {
+  const { avatar } = useTryOn();
   const [activeImg, setActiveImg] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState(false);
@@ -248,7 +250,7 @@ export default function ProductDetail({ product }: { product: Product }) {
               className="w-full flex items-center justify-center gap-2 bg-ink text-cream py-4 text-sm uppercase tracking-widest hover:bg-gold hover:text-ink transition-all duration-300"
             >
               <Sparkles size={15} />
-              Experimentar virtualmente
+              {avatar ? "Experimentar Virtualmente" : "Criar Avatar e Experimentar"}
             </button>
             <a
               href={`https://wa.me/5500000000000?text=Olá! Tenho interesse no ${product.name} (R$ ${product.price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})`}

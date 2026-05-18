@@ -7,8 +7,8 @@ export interface TryOnJob {
   productSlug: string;
   productName: string;
   productImage: string;
-  selfiePreview: string | null;   // data URL — shown in results
-  bodyPreview: string;            // data URL — shown in results
+  selfiePreview: string | null;
+  bodyPreview: string;
   status: "processing" | "completed" | "failed";
   outputUrl?: string;
   timestamp: number;
@@ -18,27 +18,31 @@ interface TryOnContextValue {
   jobs: TryOnJob[];
   addJob: (job: Omit<TryOnJob, "status" | "outputUrl">) => void;
   clearJobs: () => void;
-  freshCompletions: TryOnJob[];   // jobs just completed (not yet dismissed)
+  freshCompletions: TryOnJob[];
   dismissCompletion: (jobId: string) => void;
+  avatar: string | null;
+  setAvatar: (dataUrl: string) => void;
+  clearAvatar: () => void;
 }
 
 const TryOnContext = createContext<TryOnContextValue | null>(null);
 const STORAGE_KEY = "sarambi_tryon_v1";
+const AVATAR_KEY = "sarambi_avatar_v1";
 
 export function TryOnProvider({ children }: { children: React.ReactNode }) {
   const [jobs, setJobs] = useState<TryOnJob[]>([]);
   const [freshCompletions, setFreshCompletions] = useState<TryOnJob[]>([]);
+  const [avatar, setAvatarState] = useState<string | null>(null);
   const jobsRef = useRef<TryOnJob[]>([]);
   jobsRef.current = jobs;
 
-  // Hydrate from localStorage
+  // Hydrate jobs from localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed: TryOnJob[] = JSON.parse(raw);
         const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-        // Mark stale "processing" jobs as failed so UI doesn't hang
         const cleaned = parsed
           .filter((j) => j.timestamp > cutoff)
           .map((j) => (j.status === "processing" ? { ...j, status: "failed" as const } : j));
@@ -47,14 +51,22 @@ export function TryOnProvider({ children }: { children: React.ReactNode }) {
     } catch { /* ignore */ }
   }, []);
 
-  // Persist to localStorage
+  // Hydrate avatar from sessionStorage
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(AVATAR_KEY);
+      if (stored) setAvatarState(stored);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Persist jobs to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
     } catch { /* ignore */ }
   }, [jobs]);
 
-  // Continuous polling for processing jobs — runs once, reads via ref
+  // Continuous polling for processing jobs
   useEffect(() => {
     const interval = setInterval(async () => {
       const processing = jobsRef.current.filter((j) => j.status === "processing");
@@ -97,8 +109,18 @@ export function TryOnProvider({ children }: { children: React.ReactNode }) {
     setFreshCompletions((prev) => prev.filter((j) => j.jobId !== jobId));
   }, []);
 
+  const setAvatar = useCallback((dataUrl: string) => {
+    setAvatarState(dataUrl);
+    try { sessionStorage.setItem(AVATAR_KEY, dataUrl); } catch { /* ignore */ }
+  }, []);
+
+  const clearAvatar = useCallback(() => {
+    setAvatarState(null);
+    try { sessionStorage.removeItem(AVATAR_KEY); } catch { /* ignore */ }
+  }, []);
+
   return (
-    <TryOnContext.Provider value={{ jobs, addJob, clearJobs, freshCompletions, dismissCompletion }}>
+    <TryOnContext.Provider value={{ jobs, addJob, clearJobs, freshCompletions, dismissCompletion, avatar, setAvatar, clearAvatar }}>
       {children}
     </TryOnContext.Provider>
   );
