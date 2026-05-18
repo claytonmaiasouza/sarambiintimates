@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Sparkles, ChevronLeft, ChevronRight, ArrowLeft, ZoomIn, X } from "lucide-react";
 import type { Product } from "@/lib/products";
 import TryOnModal from "@/components/TryOnModal";
+import AvatarModal from "@/components/AvatarModal";
 import { useTryOn } from "@/contexts/TryOnContext";
 
 const categoryLabel: Record<string, string> = {
@@ -25,6 +26,7 @@ export default function ProductDetail({ product }: { product: Product }) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const [imgStyle, setImgStyle] = useState<React.CSSProperties>({});
   const galleryRef = useRef<HTMLDivElement>(null);
@@ -245,13 +247,30 @@ export default function ProductDetail({ product }: { product: Product }) {
 
           {/* CTAs */}
           <div className="flex flex-col gap-3 pt-2">
-            <button
-              onClick={() => setModalOpen(true)}
-              className="w-full flex items-center justify-center gap-2 bg-ink text-cream py-4 text-sm uppercase tracking-widest hover:bg-gold hover:text-ink transition-all duration-300"
-            >
-              <Sparkles size={15} />
-              {avatar ? "Experimentar Virtualmente" : "Criar Avatar e Experimentar"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setModalOpen(true)}
+                className="flex-1 flex items-center justify-center gap-2 bg-ink text-cream py-4 text-sm uppercase tracking-widest hover:bg-gold hover:text-ink transition-all duration-300"
+              >
+                <Sparkles size={15} />
+                {avatar ? "Experimentar Virtualmente" : "Criar Avatar e Experimentar"}
+              </button>
+              {avatar && (
+                <button
+                  onClick={() => setAvatarModalOpen(true)}
+                  title="Ver e alterar seu avatar"
+                  className="w-16 border border-border hover:border-ink transition-colors overflow-hidden flex-shrink-0 relative"
+                >
+                  <Image
+                    src={avatar}
+                    alt="Seu avatar"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </button>
+              )}
+            </div>
             <a
               href={`https://wa.me/5500000000000?text=Olá! Tenho interesse no ${product.name} (R$ ${product.price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})`}
               target="_blank"
@@ -343,6 +362,9 @@ export default function ProductDetail({ product }: { product: Product }) {
 
       {/* Try-on modal */}
       {modalOpen && <TryOnModal product={product} onClose={() => setModalOpen(false)} />}
+
+      {/* Avatar modal */}
+      {avatarModalOpen && <AvatarModal onClose={() => setAvatarModalOpen(false)} />}
     </>
   );
 }

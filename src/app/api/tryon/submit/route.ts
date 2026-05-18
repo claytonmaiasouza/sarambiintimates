@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
           category,
           mode: "quality",
           segmentation_free: false,
+          output_format: "png",
         },
       }),
     });

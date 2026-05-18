@@ -80,7 +80,7 @@ export default function SessionResults() {
             )}
             {selected.status === "completed" && selected.outputUrl && (
               <div className="flex flex-col gap-4">
-                <ResultViewer outputUrl={selected.outputUrl} />
+                <ResultViewer outputUrl={selected.outputUrl} background={selected.background} />
                 <div className="flex gap-3">
                   <a
                     href={selected.outputUrl}

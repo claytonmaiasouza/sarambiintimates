@@ -5,7 +5,21 @@ import Image from "next/image";
 
 const ZOOM_SCALE = 2.5;
 
-export default function ResultViewer({ outputUrl }: { outputUrl: string }) {
+// Gradient backgrounds simulating fitting room environments
+// mix-blend-mode:multiply on the Fashn.ai PNG makes the white background
+// disappear, revealing this gradient beneath the person.
+const BG_GRADIENTS: Record<string, string> = {
+  studio:   "linear-gradient(180deg, #E8E8EA 0%, #E8E8EA 58%, #CCCAC6 100%)",
+  elegante: "linear-gradient(180deg, #EDE4D6 0%, #EDE4D6 58%, #C8B8A0 100%)",
+};
+
+export default function ResultViewer({
+  outputUrl,
+  background = "studio",
+}: {
+  outputUrl: string;
+  background?: string;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Desktop: hover + tilt
@@ -15,8 +29,10 @@ export default function ResultViewer({ outputUrl }: { outputUrl: string }) {
 
   // Mobile: tap-to-zoom + drag-to-pan
   const [mobileZoomed, setMobileZoomed] = useState(false);
-  const [origin, setOrigin] = useState({ x: 50, y: 50 }); // % transform-origin
+  const [origin, setOrigin] = useState({ x: 50, y: 50 });
   const touchRef = useRef<{ startX: number; startY: number; time: number; lastOriginX: number; lastOriginY: number } | null>(null);
+
+  const bgGradient = BG_GRADIENTS[background] ?? BG_GRADIENTS.studio;
 
   // --- Desktop handlers ---
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -59,7 +75,6 @@ export default function ResultViewer({ outputUrl }: { outputUrl: string }) {
     if (!rect) return;
     const dx = t.clientX - touchRef.current.startX;
     const dy = t.clientY - touchRef.current.startY;
-    // Sensitivity: moving container width fully pans image edge-to-edge
     const sensitivity = 100 / (ZOOM_SCALE - 1);
     const newX = Math.max(0, Math.min(100, touchRef.current.lastOriginX - (dx / rect.width) * sensitivity));
     const newY = Math.max(0, Math.min(100, touchRef.current.lastOriginY - (dy / rect.height) * sensitivity));
@@ -95,15 +110,23 @@ export default function ResultViewer({ outputUrl }: { outputUrl: string }) {
     ? { transform: `scale(${ZOOM_SCALE})`, transformOrigin: `${origin.x}% ${origin.y}%`, transition: "none", cursor: "grab" }
     : { transform: "scale(1)", transformOrigin: "center", transition: "transform 0.3s ease", cursor: "zoom-in" };
 
+  // multiply blend: white pixels in Fashn.ai output become transparent,
+  // revealing the background gradient beneath the person.
+  const blendStyle: React.CSSProperties = { mixBlendMode: "multiply" };
+
   const combinedImgStyle: React.CSSProperties = hovered
-    ? { ...imgStyle, transition: "none", cursor: "zoom-in" }
-    : { ...mobileImgStyle };
+    ? { ...imgStyle, ...blendStyle, transition: "none", cursor: "zoom-in" }
+    : { ...mobileImgStyle, ...blendStyle };
 
   return (
     <div
       ref={containerRef}
-      className="aspect-[3/4] relative rounded-sm select-none touch-none"
-      style={{ ...tiltStyle, transition: hovered ? "none" : "transform 0.4s ease" }}
+      className="aspect-[3/4] relative rounded-sm select-none touch-none overflow-hidden"
+      style={{
+        background: bgGradient,
+        ...tiltStyle,
+        transition: hovered ? "none" : "transform 0.4s ease",
+      }}
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={handleMouseLeave}
@@ -111,21 +134,19 @@ export default function ResultViewer({ outputUrl }: { outputUrl: string }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="absolute inset-0 overflow-hidden rounded-sm">
-        <Image
-          src={outputUrl}
-          alt="Resultado do provador"
-          fill
-          className="object-cover"
-          style={combinedImgStyle}
-          unoptimized
-        />
-      </div>
+      <Image
+        src={outputUrl}
+        alt="Resultado do provador"
+        fill
+        className="object-cover"
+        style={combinedImgStyle}
+        unoptimized
+      />
 
       {/* Hint overlay */}
       {!hovered && !mobileZoomed && (
-        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-ink/60 to-transparent p-3 flex items-center justify-center rounded-b-sm pointer-events-none">
-          <span className="text-cream/80 text-xs tracking-wide">
+        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/30 to-transparent p-3 flex items-center justify-center pointer-events-none">
+          <span className="text-white/80 text-xs tracking-wide">
             <span className="hidden md:inline">Passe o mouse para zoom · mova para girar</span>
             <span className="md:hidden">Toque para ampliar · arraste para mover</span>
           </span>
@@ -133,7 +154,7 @@ export default function ResultViewer({ outputUrl }: { outputUrl: string }) {
       )}
 
       {mobileZoomed && (
-        <div className="absolute top-2 right-2 bg-ink/75 text-cream text-xs px-2.5 py-1 rounded-full pointer-events-none md:hidden">
+        <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full pointer-events-none md:hidden">
           Toque para sair do zoom
         </div>
       )}

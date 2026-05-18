@@ -12,6 +12,7 @@ export interface TryOnJob {
   status: "processing" | "completed" | "failed";
   outputUrl?: string;
   timestamp: number;
+  background?: string;
 }
 
 interface TryOnContextValue {
