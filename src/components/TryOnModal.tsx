@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useDropzone } from "react-dropzone";
 import { X, Upload, Camera, User, Sparkles, Loader2, CheckCircle, RefreshCw } from "lucide-react";
 import { useTryOn } from "@/contexts/TryOnContext";
+import { resizeForStorage } from "@/lib/imageUtils";
+import { applyBackground, BG_CONFIGS, type BgKey } from "@/lib/backgroundRemoval";
 import type { Product } from "@/lib/products";
 
 interface Props {
@@ -14,7 +16,7 @@ interface Props {
 
 type Step = "upload" | "confirm" | "submitting" | "done";
 
-import { resizeForStorage } from "@/lib/imageUtils";
+// ─── PhotoDropzone ────────────────────────────────────────────────────────────
 
 function PhotoDropzone({
   label,
@@ -125,17 +127,47 @@ function PhotoDropzone({
   );
 }
 
-type Background = "studio" | "elegante";
+// ─── Background selector (shared between upload + confirm steps) ──────────────
 
-const BG_OPTIONS: { id: Background; label: string; description: string; color: string }[] = [
-  { id: "studio",   label: "Estúdio",  description: "Fundo neutro",      color: "#F0F0F2" },
-  { id: "elegante", label: "Boutique", description: "Fundo creme quente", color: "#F0E4D2" },
-];
+function BgSelector({
+  value,
+  onChange,
+}: {
+  value: BgKey;
+  onChange: (k: BgKey) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs uppercase tracking-widest text-muted">Fundo do provador</p>
+      <div className="flex gap-2">
+        {(Object.entries(BG_CONFIGS) as [BgKey, typeof BG_CONFIGS[BgKey]][]).map(([key, cfg]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onChange(key)}
+            className={`flex items-center gap-2 px-3 py-2 border-2 rounded-sm text-xs uppercase tracking-widest transition-all ${
+              value === key ? "border-ink text-ink" : "border-border text-muted hover:border-ink/40"
+            }`}
+          >
+            <span
+              className="w-5 h-5 rounded-sm border border-black/10 flex-shrink-0"
+              style={{ background: cfg.gradient }}
+            />
+            {cfg.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── TryOnModal ───────────────────────────────────────────────────────────────
 
 export default function TryOnModal({ product, onClose }: Props) {
   const { addJob, avatar, setAvatar } = useTryOn();
   const [step, setStep] = useState<Step>(avatar ? "confirm" : "upload");
-  const [background, setBackground] = useState<Background>("studio");
+  const [background, setBackground] = useState<BgKey>("studio");
+  const [processingMsg, setProcessingMsg] = useState("");
 
   const [bodyFile, setBodyFile] = useState<File | null>(null);
   const [bodyPreview, setBodyPreview] = useState<string | null>(null);
@@ -158,7 +190,7 @@ export default function TryOnModal({ product, onClose }: Props) {
     setError(null);
   }, []);
 
-  // Submit try-on using the original File (best quality for server processing)
+  // Core: send composited image to server → Fashn.ai job
   const submitTryOn = async (file: File, previewUrl: string) => {
     const formData = new FormData();
     formData.append("body_image", file);
@@ -168,10 +200,7 @@ export default function TryOnModal({ product, onClose }: Props) {
 
     const res = await fetch("/api/tryon/submit", { method: "POST", body: formData });
     const data = await res.json();
-
-    if (!res.ok || !data.jobId) {
-      throw new Error(data.error || "Erro ao enviar imagens");
-    }
+    if (!res.ok || !data.jobId) throw new Error(data.error || "Erro ao enviar imagens");
 
     addJob({
       jobId: data.jobId,
@@ -185,15 +214,29 @@ export default function TryOnModal({ product, onClose }: Props) {
     });
   };
 
-  // First-time: save avatar to session + submit
+  // First time: remove background → composite on chosen env → save avatar → submit
   const handleCreateAvatar = async () => {
-    if (!bodyFile || !bodyPreview) return;
+    if (!bodyFile) return;
     setStep("submitting");
     setError(null);
     try {
-      const resized = await resizeForStorage(bodyPreview);
+      // 1. Remove background + composite on chosen environment
+      setProcessingMsg("Recortando sua foto…");
+      const composited = await applyBackground(bodyFile, background, (label, pct) => {
+        setProcessingMsg(`${label} ${pct > 0 ? `${pct}%` : ""}`);
+      });
+
+      // 2. Resize + store in sessionStorage
+      setProcessingMsg("Salvando avatar…");
+      const resized = await resizeForStorage(composited);
       setAvatar(resized);
-      await submitTryOn(bodyFile, resized);
+
+      // 3. Send composited image to server
+      setProcessingMsg("Enviando para o provador…");
+      const blob = await fetch(composited).then((r) => r.blob());
+      const file = new File([blob], "avatar-bg.jpg", { type: "image/jpeg" });
+      await submitTryOn(file, resized);
+
       setStep("done");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erro inesperado");
@@ -201,10 +244,11 @@ export default function TryOnModal({ product, onClose }: Props) {
     }
   };
 
-  // Subsequent: re-use stored avatar (convert base64 back to File for the server)
+  // Subsequent: re-use stored avatar directly
   const handleUseAvatar = async () => {
     if (!avatar) return;
     setStep("submitting");
+    setProcessingMsg("Enviando para o provador…");
     setError(null);
     try {
       const blob = await fetch(avatar).then((r) => r.blob());
@@ -233,6 +277,7 @@ export default function TryOnModal({ product, onClose }: Props) {
 
         {/* Body */}
         <div className="px-6 py-6">
+          {/* ── Done ── */}
           {step === "done" ? (
             <div className="flex flex-col items-center gap-4 py-8 text-center">
               <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center">
@@ -254,17 +299,23 @@ export default function TryOnModal({ product, onClose }: Props) {
               </button>
             </div>
 
+          /* ── Submitting ── */
           ) : step === "submitting" ? (
             <div className="flex flex-col items-center gap-4 py-12 text-center">
               <Loader2 size={36} className="text-gold animate-spin" />
-              <p className="text-sm text-muted">Enviando suas fotos…</p>
+              <p className="text-sm text-muted">{processingMsg || "Processando…"}</p>
+              {processingMsg.includes("Baixando") && (
+                <p className="text-xs text-muted/60 max-w-xs">
+                  O modelo de IA é baixado uma única vez e fica salvo no seu dispositivo.
+                </p>
+              )}
             </div>
 
+          /* ── Confirm (avatar exists) ── */
           ) : step === "confirm" ? (
-            /* Has avatar — confirm + submit */
             <div className="flex flex-col gap-5">
               <p className="text-sm text-muted">
-                Seu avatar está pronto! Clique em <em>Experimentar</em> para ver como essa peça fica em você.
+                Seu avatar está pronto! Escolha o fundo e clique em <em>Experimentar</em>.
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
@@ -284,34 +335,13 @@ export default function TryOnModal({ product, onClose }: Props) {
                 </div>
               </div>
 
-              {/* Background selector */}
-              <div className="flex flex-col gap-2">
-                <p className="text-xs uppercase tracking-widest text-muted">Fundo do provador</p>
-                <div className="flex gap-2">
-                  {BG_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setBackground(opt.id)}
-                      className={`flex items-center gap-2 px-3 py-2 border-2 rounded-sm text-xs uppercase tracking-widest transition-all ${
-                        background === opt.id ? "border-ink text-ink" : "border-border text-muted hover:border-ink/40"
-                      }`}
-                    >
-                      <span
-                        className="w-4 h-4 rounded-sm border border-black/10 flex-shrink-0"
-                        style={{ background: opt.color }}
-                      />
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <BgSelector value={background} onChange={setBackground} />
 
               {error && (
                 <p className="text-xs text-rose-dark bg-rose/10 px-3 py-2 rounded-sm">{error}</p>
               )}
 
-              <div className="flex gap-3 justify-between pt-2 items-center">
+              <div className="flex gap-3 justify-between items-center pt-2">
                 <button
                   onClick={() => { setBodyFile(null); setBodyPreview(null); setStep("upload"); }}
                   className="flex items-center gap-1.5 text-xs text-muted uppercase tracking-widest hover:text-ink transition-colors"
@@ -329,11 +359,12 @@ export default function TryOnModal({ product, onClose }: Props) {
               </div>
             </div>
 
+          /* ── Upload (no avatar yet) ── */
           ) : (
-            /* No avatar — create avatar flow */
             <div className="flex flex-col gap-5">
               <p className="text-sm text-muted">
-                Envie uma foto de corpo inteiro para criar seu avatar. Ele ficará salvo durante toda a sessão — assim você experimenta várias peças sem precisar enviar outra foto.
+                Envie uma foto de corpo inteiro. Vamos recortar sua silhueta e colocá-la no fundo do
+                provador escolhido — o resultado fica salvo para você experimentar outras peças.
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <PhotoDropzone
@@ -354,28 +385,7 @@ export default function TryOnModal({ product, onClose }: Props) {
                 </div>
               </div>
 
-              {/* Background selector */}
-              <div className="flex flex-col gap-2">
-                <p className="text-xs uppercase tracking-widest text-muted">Fundo do provador</p>
-                <div className="flex gap-2">
-                  {BG_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setBackground(opt.id)}
-                      className={`flex items-center gap-2 px-3 py-2 border-2 rounded-sm text-xs uppercase tracking-widest transition-all ${
-                        background === opt.id ? "border-ink text-ink" : "border-border text-muted hover:border-ink/40"
-                      }`}
-                    >
-                      <span
-                        className="w-4 h-4 rounded-sm border border-black/10 flex-shrink-0"
-                        style={{ background: opt.color }}
-                      />
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <BgSelector value={background} onChange={setBackground} />
 
               {error && (
                 <p className="text-xs text-rose-dark bg-rose/10 px-3 py-2 rounded-sm">{error}</p>

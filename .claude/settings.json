@@ -6,7 +6,9 @@
       "PowerShell(Get-ChildItem \"d:\\\\projetos claudecode\\\\sarambiintimates\\\\public\\\\images\" -Recurse -File | ForEach-Object { \"$\\($_.Name\\) = $\\([math]::Round\\($_.Length/1KB\\)\\) KB\" })",
       "WebFetch(domain:docs.fashn.ai)",
       "WebFetch(domain:sarambi.com.br)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat: provador em background + modal de 2 fotos + toast + galeria de resultados *)",
+      "Bash(git push *)"
     ]
   }
 }

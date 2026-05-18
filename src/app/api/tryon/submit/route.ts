@@ -7,52 +7,12 @@ export const maxDuration = 30;
 const FASHN_API_KEY = process.env.FASHN_API_KEY;
 const FASHN_BASE_URL = "https://api.fashn.ai/v1";
 
-const BG_COLORS: Record<string, { r: number; g: number; b: number }> = {
-  studio:   { r: 240, g: 240, b: 242 }, // neutral cool white
-  elegante: { r: 240, g: 228, b: 210 }, // warm parchment
-};
-
-async function resizeOnBackground(
-  buffer: Buffer,
-  bgKey: string
-): Promise<string> {
-  const bg = BG_COLORS[bgKey] ?? BG_COLORS.studio;
-
-  // Rotate (EXIF) + resize to fit inside 768×1024
-  const modelResized = await sharp(buffer)
+// Rotate (EXIF) + resize for Fashn.ai
+async function resizeToBase64(buffer: Buffer): Promise<string> {
+  const resized = await sharp(buffer)
     .rotate()
     .resize(768, 1024, { fit: "inside", withoutEnlargement: true })
-    .jpeg({ quality: 90 })
-    .toBuffer();
-
-  // Get actual dimensions after resize
-  const { width: w = 768, height: h = 1024 } = await sharp(modelResized).metadata();
-
-  // Place on solid background so AI inherits the environment colour
-  const left = Math.round((768 - w) / 2);
-  const top  = Math.round((1024 - h) / 2);
-
-  const composed = await sharp({
-    create: { width: 768, height: 1024, channels: 3, background: bg },
-  })
-    .jpeg({ quality: 90 })
-    .toBuffer();
-
-  const final = await sharp(composed)
-    .composite([{ input: modelResized, left, top }])
-    .jpeg({ quality: 85 })
-    .toBuffer();
-
-  return `data:image/jpeg;base64,${final.toString("base64")}`;
-}
-
-async function urlToBase64(url: string): Promise<string> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Falha ao baixar imagem da peça: ${res.status}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  const resized = await sharp(buf)
-    .resize(768, 1024, { fit: "inside", withoutEnlargement: true })
-    .jpeg({ quality: 85 })
+    .jpeg({ quality: 88 })
     .toBuffer();
   return `data:image/jpeg;base64,${resized.toString("base64")}`;
 }
@@ -67,7 +27,6 @@ export async function POST(request: NextRequest) {
     const bodyImageFile = formData.get("body_image") as File | null;
     const garmentSlug   = formData.get("garment_slug") as string;
     const category      = (formData.get("category") as string) || "tops";
-    const background    = (formData.get("background") as string) || "studio";
 
     if (!bodyImageFile) {
       return NextResponse.json({ error: "Foto de corpo inteiro é obrigatória" }, { status: 400 });
@@ -78,11 +37,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
     }
 
-    const modelBuffer = Buffer.from(await bodyImageFile.arrayBuffer());
-
     const [modelBase64, garmentBase64] = await Promise.all([
-      resizeOnBackground(modelBuffer, background),
-      urlToBase64(product.garmentImage),
+      resizeToBase64(Buffer.from(await bodyImageFile.arrayBuffer())),
+      fetch(product.garmentImage)
+        .then((r) => r.arrayBuffer())
+        .then((b) => resizeToBase64(Buffer.from(b))),
     ]);
 
     const submitRes = await fetch(`${FASHN_BASE_URL}/run`, {

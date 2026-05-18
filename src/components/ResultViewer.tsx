@@ -2,16 +2,9 @@
 
 import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
+import { BG_CONFIGS } from "@/lib/backgroundRemoval";
 
 const ZOOM_SCALE = 2.5;
-
-// Gradient backgrounds simulating fitting room environments
-// mix-blend-mode:multiply on the Fashn.ai PNG makes the white background
-// disappear, revealing this gradient beneath the person.
-const BG_GRADIENTS: Record<string, string> = {
-  studio:   "linear-gradient(180deg, #E8E8EA 0%, #E8E8EA 58%, #CCCAC6 100%)",
-  elegante: "linear-gradient(180deg, #EDE4D6 0%, #EDE4D6 58%, #C8B8A0 100%)",
-};
 
 export default function ResultViewer({
   outputUrl,
@@ -32,7 +25,9 @@ export default function ResultViewer({
   const [origin, setOrigin] = useState({ x: 50, y: 50 });
   const touchRef = useRef<{ startX: number; startY: number; time: number; lastOriginX: number; lastOriginY: number } | null>(null);
 
-  const bgGradient = BG_GRADIENTS[background] ?? BG_GRADIENTS.studio;
+  const bgGradient =
+    (BG_CONFIGS as Record<string, { gradient: string }>)[background]?.gradient ??
+    BG_CONFIGS.studio.gradient;
 
   // --- Desktop handlers ---
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -110,13 +105,9 @@ export default function ResultViewer({
     ? { transform: `scale(${ZOOM_SCALE})`, transformOrigin: `${origin.x}% ${origin.y}%`, transition: "none", cursor: "grab" }
     : { transform: "scale(1)", transformOrigin: "center", transition: "transform 0.3s ease", cursor: "zoom-in" };
 
-  // multiply blend: white pixels in Fashn.ai output become transparent,
-  // revealing the background gradient beneath the person.
-  const blendStyle: React.CSSProperties = { mixBlendMode: "multiply" };
-
   const combinedImgStyle: React.CSSProperties = hovered
-    ? { ...imgStyle, ...blendStyle, transition: "none", cursor: "zoom-in" }
-    : { ...mobileImgStyle, ...blendStyle };
+    ? { ...imgStyle, transition: "none", cursor: "zoom-in" }
+    : { ...mobileImgStyle };
 
   return (
     <div
