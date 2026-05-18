@@ -145,9 +145,17 @@ function PhotoDropzone({
   );
 }
 
+type Background = "studio" | "elegante";
+
+const BG_OPTIONS: { id: Background; label: string; description: string; color: string }[] = [
+  { id: "studio",   label: "Estúdio",  description: "Fundo neutro",      color: "#F0F0F2" },
+  { id: "elegante", label: "Boutique", description: "Fundo creme quente", color: "#F0E4D2" },
+];
+
 export default function TryOnModal({ product, onClose }: Props) {
   const { addJob, avatar, setAvatar } = useTryOn();
   const [step, setStep] = useState<Step>(avatar ? "confirm" : "upload");
+  const [background, setBackground] = useState<Background>("studio");
 
   const [bodyFile, setBodyFile] = useState<File | null>(null);
   const [bodyPreview, setBodyPreview] = useState<string | null>(null);
@@ -176,6 +184,7 @@ export default function TryOnModal({ product, onClose }: Props) {
     formData.append("body_image", file);
     formData.append("garment_slug", product.slug);
     formData.append("category", product.tryonCategory);
+    formData.append("background", background);
 
     const res = await fetch("/api/tryon/submit", { method: "POST", body: formData });
     const data = await res.json();
@@ -294,6 +303,29 @@ export default function TryOnModal({ product, onClose }: Props) {
                 </div>
               </div>
 
+              {/* Background selector */}
+              <div className="flex flex-col gap-2">
+                <p className="text-xs uppercase tracking-widest text-muted">Fundo do provador</p>
+                <div className="flex gap-2">
+                  {BG_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setBackground(opt.id)}
+                      className={`flex items-center gap-2 px-3 py-2 border-2 rounded-sm text-xs uppercase tracking-widest transition-all ${
+                        background === opt.id ? "border-ink text-ink" : "border-border text-muted hover:border-ink/40"
+                      }`}
+                    >
+                      <span
+                        className="w-4 h-4 rounded-sm border border-black/10 flex-shrink-0"
+                        style={{ background: opt.color }}
+                      />
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {error && (
                 <p className="text-xs text-rose-dark bg-rose/10 px-3 py-2 rounded-sm">{error}</p>
               )}
@@ -338,6 +370,29 @@ export default function TryOnModal({ product, onClose }: Props) {
                       <p className="text-cream text-xs font-display">{product.name}</p>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Background selector */}
+              <div className="flex flex-col gap-2">
+                <p className="text-xs uppercase tracking-widest text-muted">Fundo do provador</p>
+                <div className="flex gap-2">
+                  {BG_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setBackground(opt.id)}
+                      className={`flex items-center gap-2 px-3 py-2 border-2 rounded-sm text-xs uppercase tracking-widest transition-all ${
+                        background === opt.id ? "border-ink text-ink" : "border-border text-muted hover:border-ink/40"
+                      }`}
+                    >
+                      <span
+                        className="w-4 h-4 rounded-sm border border-black/10 flex-shrink-0"
+                        style={{ background: opt.color }}
+                      />
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
