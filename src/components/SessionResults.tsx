@@ -4,18 +4,59 @@ import { useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ChevronLeft, ChevronRight, Sparkles, Loader2, AlertCircle,
-  Download, ShoppingBag, RotateCcw,
+  Sparkles, Loader2, AlertCircle, Download, ShoppingBag, RotateCcw,
 } from "lucide-react";
-import { useTryOn } from "@/contexts/TryOnContext";
+import { useTryOn, type TryOnJob } from "@/contexts/TryOnContext";
 import ResultViewer from "@/components/ResultViewer";
+
+// ── Side card (prev / next peek) ─────────────────────────────────────────────
+
+function SideCard({ job, onClick }: { job: TryOnJob; onClick: () => void }) {
+  const thumb =
+    job.status === "completed" && job.outputUrl ? job.outputUrl : job.productImage;
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full group relative rounded-sm overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+      style={{ aspectRatio: "3/4" }}
+      aria-label={job.productName}
+    >
+      <Image src={thumb} alt={job.productName} fill className="object-cover" unoptimized />
+
+      {/* dim overlay + label */}
+      <div className="absolute inset-0 bg-ink/30 group-hover:bg-ink/10 transition-colors" />
+
+      {job.status === "processing" && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader2 size={20} className="text-gold animate-spin" />
+        </div>
+      )}
+      {job.status === "failed" && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <AlertCircle size={18} className="text-rose" />
+        </div>
+      )}
+
+      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-ink/70 to-transparent px-2 py-2">
+        <p className="text-cream text-xs font-display truncate">{job.productName}</p>
+      </div>
+    </button>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function SessionResults() {
   const { jobs, clearJobs } = useTryOn();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [animKey, setAnimKey] = useState(0);
 
   const goTo = useCallback(
-    (i: number) => setActiveIndex(Math.max(0, Math.min(jobs.length - 1, i))),
+    (i: number) => {
+      setActiveIndex(Math.max(0, Math.min(jobs.length - 1, i)));
+      setAnimKey((k) => k + 1);
+    },
     [jobs.length]
   );
 
@@ -45,6 +86,8 @@ export default function SessionResults() {
 
   const idx = Math.min(activeIndex, jobs.length - 1);
   const selected = jobs[idx];
+  const prevJob = idx > 0 ? jobs[idx - 1] : null;
+  const nextJob = idx < jobs.length - 1 ? jobs[idx + 1] : null;
 
   return (
     <section className="py-12 px-6 bg-cream flex-1">
@@ -67,96 +110,79 @@ export default function SessionResults() {
           </button>
         </div>
 
-        {/* Carousel + info */}
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 items-start">
+        {/* ── Peek carousel ──────────────────────────────────────────────────── */}
+        <div className="flex items-end gap-3 sm:gap-5">
 
-          {/* Carousel track */}
-          <div className="w-full lg:flex-1 relative">
-            <div className="overflow-hidden">
-              <div
-                className="flex transition-transform duration-500 ease-in-out"
-                style={{ transform: `translateX(-${idx * 100}%)` }}
-              >
-                {jobs.map((job) => (
-                  <div key={job.jobId} className="w-full flex-shrink-0">
-                    {job.status === "processing" && (
-                      <div className="aspect-[3/4] bg-cream-dark flex flex-col items-center justify-center gap-4 rounded-sm">
-                        <Loader2 size={36} className="text-gold animate-spin" />
-                        <p className="text-muted text-sm">Gerando provador…</p>
-                        <p className="text-xs text-muted/60">Você será avisado quando ficar pronto</p>
-                      </div>
-                    )}
-                    {job.status === "failed" && (
-                      <div className="aspect-[3/4] bg-cream-dark flex flex-col items-center justify-center gap-3 rounded-sm px-8 text-center">
-                        <AlertCircle size={32} className="text-rose-dark" />
-                        <p className="text-ink font-display">Não foi possível gerar</p>
-                        <p className="text-muted text-sm">Tente experimentar novamente.</p>
-                        <Link
-                          href={`/colecao/${job.productSlug}`}
-                          className="mt-2 text-xs uppercase tracking-widest text-ink border-b border-ink hover:text-gold hover:border-gold transition-colors"
-                        >
-                          Tentar novamente
-                        </Link>
-                      </div>
-                    )}
-                    {job.status === "completed" && job.outputUrl && (
-                      <ResultViewer outputUrl={job.outputUrl} background={job.background} />
-                    )}
-                  </div>
-                ))}
-              </div>
+          {/* Prev peek */}
+          <div className={`flex-1 flex justify-end transition-opacity duration-300 ${prevJob ? "opacity-60 hover:opacity-85" : "invisible"}`}>
+            <div className="w-[75%] sm:w-[70%]">
+              {prevJob && <SideCard job={prevJob} onClick={() => goTo(idx - 1)} />}
             </div>
-
-            {/* Prev arrow */}
-            {idx > 0 && (
-              <button
-                onClick={() => goTo(idx - 1)}
-                aria-label="Peça anterior"
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-cream/90 border border-border hover:border-ink shadow-sm rounded-sm backdrop-blur-sm transition-all"
-              >
-                <ChevronLeft size={18} />
-              </button>
-            )}
-
-            {/* Next arrow */}
-            {idx < jobs.length - 1 && (
-              <button
-                onClick={() => goTo(idx + 1)}
-                aria-label="Próxima peça"
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-cream/90 border border-border hover:border-ink shadow-sm rounded-sm backdrop-blur-sm transition-all"
-              >
-                <ChevronRight size={18} />
-              </button>
-            )}
-
-            {/* Dots indicator */}
-            {jobs.length > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-4">
-                {jobs.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => goTo(i)}
-                    aria-label={`Ir para peça ${i + 1}`}
-                    className={`rounded-full transition-all duration-300 ${
-                      i === idx ? "w-5 h-1.5 bg-ink" : "w-1.5 h-1.5 bg-border hover:bg-muted"
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* Info panel */}
-          <div className="lg:w-56 flex flex-col gap-5 w-full">
-            {jobs.length > 1 && (
-              <p className="text-xs text-muted uppercase tracking-widest">
-                {idx + 1} / {jobs.length}
-              </p>
-            )}
+          {/* Center — active card */}
+          <div className="flex-[1.8] relative z-10" style={{ filter: "drop-shadow(0 20px 40px rgba(26,23,19,0.18))" }}>
+            <div key={`center-${animKey}`} className="carousel-in">
+              {selected.status === "processing" && (
+                <div className="aspect-[3/4] bg-cream-dark flex flex-col items-center justify-center gap-4 rounded-sm">
+                  <Loader2 size={36} className="text-gold animate-spin" />
+                  <p className="text-muted text-sm">Gerando provador…</p>
+                  <p className="text-xs text-muted/60">Você será avisado quando ficar pronto</p>
+                </div>
+              )}
+              {selected.status === "failed" && (
+                <div className="aspect-[3/4] bg-cream-dark flex flex-col items-center justify-center gap-3 rounded-sm px-8 text-center">
+                  <AlertCircle size={32} className="text-rose-dark" />
+                  <p className="text-ink font-display">Não foi possível gerar</p>
+                  <p className="text-muted text-sm">Tente experimentar novamente.</p>
+                  <Link
+                    href={`/colecao/${selected.productSlug}`}
+                    className="mt-2 text-xs uppercase tracking-widest text-ink border-b border-ink hover:text-gold hover:border-gold transition-colors"
+                  >
+                    Tentar novamente
+                  </Link>
+                </div>
+              )}
+              {selected.status === "completed" && selected.outputUrl && (
+                <ResultViewer outputUrl={selected.outputUrl} background={selected.background} />
+              )}
+            </div>
+          </div>
 
+          {/* Next peek */}
+          <div className={`flex-1 transition-opacity duration-300 ${nextJob ? "opacity-60 hover:opacity-85" : "invisible"}`}>
+            <div className="w-[75%] sm:w-[70%]">
+              {nextJob && <SideCard job={nextJob} onClick={() => goTo(idx + 1)} />}
+            </div>
+          </div>
+        </div>
+
+        {/* Dots */}
+        {jobs.length > 1 && (
+          <div className="flex justify-center items-center gap-2">
+            {jobs.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => goTo(i)}
+                aria-label={`Ir para peça ${i + 1}`}
+                className={`rounded-full transition-all duration-300 ${
+                  i === idx ? "w-5 h-1.5 bg-ink" : "w-1.5 h-1.5 bg-border hover:bg-muted"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Info + actions */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between border-t border-border pt-6">
+          <div className="flex items-center gap-4">
+            {/* Product thumb */}
+            <div className="relative w-12 rounded-sm overflow-hidden flex-shrink-0 border border-border" style={{ aspectRatio: "3/4" }}>
+              <Image src={selected.productImage} alt={selected.productName} fill className="object-cover" unoptimized />
+            </div>
             <div>
-              <p className="font-display text-xl text-ink leading-tight">{selected.productName}</p>
-              <div className="mt-2">
+              <p className="font-display text-lg text-ink leading-tight">{selected.productName}</p>
+              <div className="mt-1">
                 {selected.status === "processing" && (
                   <span className="flex items-center gap-1.5 text-xs text-gold">
                     <Loader2 size={11} className="animate-spin" />
@@ -169,48 +195,46 @@ export default function SessionResults() {
                 {selected.status === "failed" && (
                   <span className="text-xs text-rose-dark">Não foi possível gerar</span>
                 )}
+                {jobs.length > 1 && (
+                  <span className="text-xs text-muted/60 ml-2">{idx + 1} / {jobs.length}</span>
+                )}
               </div>
             </div>
+          </div>
 
-            {/* Product thumbnail */}
-            <div className="relative w-20 rounded-sm overflow-hidden border border-border" style={{ aspectRatio: "3/4" }}>
-              <Image src={selected.productImage} alt={selected.productName} fill className="object-cover" unoptimized />
-            </div>
-
-            {/* Actions */}
+          <div className="flex flex-wrap gap-2">
             {selected.status === "completed" && selected.outputUrl && (
-              <div className="flex flex-col gap-2">
+              <>
                 <a
                   href={selected.outputUrl}
                   download="sarambi-tryon.jpg"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 border border-border text-muted py-2.5 text-xs uppercase tracking-widest hover:border-ink hover:text-ink transition-colors"
+                  className="flex items-center gap-2 border border-border text-muted px-4 py-2 text-xs uppercase tracking-widest hover:border-ink hover:text-ink transition-colors"
                 >
                   <Download size={12} />
-                  Baixar foto
+                  Baixar
                 </a>
                 <Link
                   href={`/colecao/${selected.productSlug}`}
-                  className="flex items-center justify-center gap-2 bg-ink text-cream py-2.5 text-xs uppercase tracking-widest hover:bg-gold hover:text-ink transition-all"
+                  className="flex items-center gap-2 bg-ink text-cream px-4 py-2 text-xs uppercase tracking-widest hover:bg-gold hover:text-ink transition-all"
                 >
                   <ShoppingBag size={12} />
                   Ver produto
                 </Link>
-              </div>
+              </>
             )}
-
             <Link
               href="/colecao"
-              className="flex items-center justify-center gap-2 border border-dashed border-border text-muted py-3 text-xs uppercase tracking-widest hover:border-gold hover:text-gold transition-colors mt-auto"
+              className="flex items-center gap-2 border border-dashed border-border text-muted px-4 py-2 text-xs uppercase tracking-widest hover:border-gold hover:text-gold transition-colors"
             >
               <Sparkles size={12} />
-              Experimentar mais peças
+              Experimentar mais
             </Link>
           </div>
         </div>
 
-        {/* Thumbnail strip (só aparece com 2+ peças) */}
+        {/* Thumbnail strip */}
         {jobs.length > 1 && (
           <div className="flex gap-3 overflow-x-auto pb-1">
             {jobs.map((job, i) => (
@@ -218,23 +242,23 @@ export default function SessionResults() {
                 key={job.jobId}
                 onClick={() => goTo(i)}
                 title={job.productName}
-                className={`flex-shrink-0 relative rounded-sm overflow-hidden border-2 transition-all`}
+                className="flex-shrink-0 relative rounded-sm overflow-hidden border-2 transition-all"
                 style={{
-                  width: 56,
-                  height: 75,
+                  width: 52,
+                  height: 69,
                   borderColor: i === idx ? "var(--color-ink, #1A1713)" : "transparent",
-                  opacity: i === idx ? 1 : 0.5,
+                  opacity: i === idx ? 1 : 0.45,
                 }}
               >
                 <Image src={job.productImage} alt={job.productName} fill className="object-cover" unoptimized />
                 {job.status === "processing" && (
                   <div className="absolute inset-0 bg-ink/50 flex items-center justify-center">
-                    <Loader2 size={11} className="text-gold animate-spin" />
+                    <Loader2 size={10} className="text-gold animate-spin" />
                   </div>
                 )}
                 {job.status === "failed" && (
                   <div className="absolute inset-0 bg-ink/50 flex items-center justify-center">
-                    <AlertCircle size={11} className="text-rose" />
+                    <AlertCircle size={10} className="text-rose" />
                   </div>
                 )}
               </button>
